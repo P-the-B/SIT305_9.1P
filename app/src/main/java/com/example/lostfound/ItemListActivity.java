@@ -12,6 +12,7 @@ import android.widget.ImageView;
 import android.widget.SeekBar;
 import android.widget.TextView;
 
+import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.app.ActivityCompat;
 import androidx.recyclerview.widget.LinearLayoutManager;
@@ -21,7 +22,11 @@ import com.example.lostfound.adapter.ItemAdapter;
 import com.example.lostfound.database.DBHelper;
 import com.example.lostfound.model.LostItem;
 import com.google.android.gms.location.FusedLocationProviderClient;
+import com.google.android.gms.location.LocationCallback;
+import com.google.android.gms.location.LocationRequest;
+import com.google.android.gms.location.LocationResult;
 import com.google.android.gms.location.LocationServices;
+import com.google.android.gms.location.Priority;
 import com.google.android.material.switchmaterial.SwitchMaterial;
 
 import java.util.ArrayList;
@@ -79,6 +84,8 @@ public class ItemListActivity extends AppCompatActivity {
         setupSearch();
         setupDistanceFilter();
         loadItems();
+        // Fetch location immediately so distance badges show even without the filter toggle
+        fetchUserLocation();
     }
 
     @Override
@@ -165,9 +172,20 @@ public class ItemListActivity extends AppCompatActivity {
     // ─── FILTER BUTTONS ────────────────────────────────────────────────────────
 
     private void setupFilterButtons() {
-        btnAll.setOnClickListener(v -> { currentFilter = 0; applyFilterAndSearch(); updateButtonLabels(); });
-        btnLost.setOnClickListener(v -> { currentFilter = 1; applyFilterAndSearch(); updateButtonLabels(); });
-        btnFound.setOnClickListener(v -> { currentFilter = 2; applyFilterAndSearch(); updateButtonLabels(); });
+        btnAll.setSelected(true); // default active state
+        btnAll.setOnClickListener(v   -> setActiveFilter(0));
+        btnLost.setOnClickListener(v  -> setActiveFilter(1));
+        btnFound.setOnClickListener(v -> setActiveFilter(2));
+    }
+
+    /** Updates selected state on all three buttons, then re-applies filter */
+    private void setActiveFilter(int filter) {
+        currentFilter = filter;
+        btnAll.setSelected(filter == 0);
+        btnLost.setSelected(filter == 1);
+        btnFound.setSelected(filter == 2);
+        applyFilterAndSearch();
+        updateButtonLabels();
     }
 
     private void updateButtonLabels() {
@@ -235,9 +253,28 @@ public class ItemListActivity extends AppCompatActivity {
             if (location != null) {
                 userLat = location.getLatitude();
                 userLng = location.getLongitude();
+                adapter.updateUserLocation(userLat, userLng);
+                applyFilterAndSearch();
+            } else {
+                // No cached fix — request a fresh one-shot update
+                LocationRequest req = new LocationRequest.Builder(
+                        Priority.PRIORITY_HIGH_ACCURACY, 1000)
+                        .setMaxUpdates(1)
+                        .build();
+                fusedClient.requestLocationUpdates(req, new LocationCallback() {
+                    @Override
+                    public void onLocationResult(@NonNull LocationResult result) {
+                        fusedClient.removeLocationUpdates(this);
+                        if (!result.getLocations().isEmpty()) {
+                            android.location.Location loc = result.getLocations().get(0);
+                            userLat = loc.getLatitude();
+                            userLng = loc.getLongitude();
+                            adapter.updateUserLocation(userLat, userLng);
+                        }
+                        applyFilterAndSearch();
+                    }
+                }, getMainLooper());
             }
-            // Re-apply even if location is null — filter will pass all items gracefully
-            applyFilterAndSearch();
         });
     }
 

@@ -71,17 +71,42 @@
                 android:textStyle="bold"
                 android:background="#E53935" />
 
-            <!-- Location -->
-            <TextView
-                android:id="@+id/txtLocation"
+            <!-- Location + Distance row -->
+            <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
+                android:orientation="horizontal"
                 android:layout_marginTop="6dp"
-                android:text="Burwood, NSW"
-                android:textColor="#444444"
-                android:textSize="14sp"
-                android:maxLines="1"
-                android:ellipsize="end" />
+                android:gravity="center_vertical">
+
+                <TextView
+                    android:id="@+id/txtLocation"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:text="Burwood, NSW"
+                    android:textColor="#444444"
+                    android:textSize="14sp"
+                    android:maxLines="1"
+                    android:ellipsize="end" />
+
+                <TextView
+                    android:id="@+id/txtDistance"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="8dp"
+                    android:paddingStart="8dp"
+                    android:paddingEnd="8dp"
+                    android:paddingTop="2dp"
+                    android:paddingBottom="2dp"
+                    android:text="1.2km"
+                    android:textColor="#1A73E8"
+                    android:textSize="12sp"
+                    android:textStyle="bold"
+                    android:background="#E8F0FE"
+                    android:visibility="gone" />
+
+            </LinearLayout>
 
             <!-- Time ago -->
             <TextView

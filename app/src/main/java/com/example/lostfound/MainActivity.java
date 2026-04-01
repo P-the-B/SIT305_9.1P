@@ -16,7 +16,11 @@ import androidx.core.app.ActivityCompat;
 import com.example.lostfound.database.DBHelper;
 import com.example.lostfound.model.LostItem;
 import com.google.android.gms.location.FusedLocationProviderClient;
+import com.google.android.gms.location.LocationCallback;
+import com.google.android.gms.location.LocationRequest;
+import com.google.android.gms.location.LocationResult;
 import com.google.android.gms.location.LocationServices;
+import com.google.android.gms.location.Priority;
 import com.google.android.gms.maps.CameraUpdateFactory;
 import com.google.android.gms.maps.GoogleMap;
 import com.google.android.gms.maps.OnMapReadyCallback;
@@ -165,17 +169,50 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
 
         fusedClient.getLastLocation().addOnSuccessListener(this, location -> {
             if (location != null) {
-                userLat = location.getLatitude();
-                userLng = location.getLongitude();
-                mMap.animateCamera(CameraUpdateFactory.newLatLngZoom(
-                        new LatLng(userLat, userLng), 12f));
+                applyLocationFix(location.getLatitude(), location.getLongitude());
             } else {
-                // No fix — default camera to Sydney
-                mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(
-                        new LatLng(-33.8688, 151.2093), 10f));
+                // Emulator or cold start — no cached fix. Request a fresh single update.
+                requestFreshLocation();
             }
-            refreshMarkers();
         });
+    }
+
+    /**
+     * Falls back to a one-shot LocationRequest when getLastLocation() returns null.
+     * This is the common case on the emulator after manually setting Extended Controls location.
+     */
+    private void requestFreshLocation() {
+        if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION)
+                != PackageManager.PERMISSION_GRANTED) return;
+
+        LocationRequest req = new LocationRequest.Builder(Priority.PRIORITY_HIGH_ACCURACY, 1000)
+                .setMaxUpdates(1)
+                .build();
+
+        fusedClient.requestLocationUpdates(req, new LocationCallback() {
+            @Override
+            public void onLocationResult(@NonNull LocationResult result) {
+                fusedClient.removeLocationUpdates(this);
+                if (!result.getLocations().isEmpty()) {
+                    android.location.Location loc = result.getLocations().get(0);
+                    applyLocationFix(loc.getLatitude(), loc.getLongitude());
+                } else {
+                    // Still nothing — fall back to Wollongong
+                    mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(
+                            new LatLng(-34.4278, 150.8931), 10f));
+                    refreshMarkers();
+                }
+            }
+        }, getMainLooper());
+    }
+
+    /** Stores the fix, moves camera, and refreshes map markers */
+    private void applyLocationFix(double lat, double lng) {
+        userLat = lat;
+        userLng = lng;
+        mMap.animateCamera(CameraUpdateFactory.newLatLngZoom(
+                new LatLng(userLat, userLng), 12f));
+        refreshMarkers();
     }
 
     @Override
@@ -233,8 +270,10 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
     private void updateStats() {
         txtLostCount.setText(String.valueOf(dbHelper.getLostCount()));
         txtFoundCount.setText(String.valueOf(dbHelper.getFoundCount()));
-        String latest = dbHelper.getLatestDate();
-        txtLatestDate.setText(latest != null ? latest : "—");
+        String latest = dbHelper.getLatestTimestamp();
+        txtLatestDate.setText(latest != null
+                ? com.example.lostfound.util.TimeUtils.getTimeAgo(latest)
+                : "—");
     }
 
     // ─── API KEY ───────────────────────────────────────────────────────────────

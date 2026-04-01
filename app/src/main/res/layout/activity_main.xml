@@ -32,7 +32,7 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_centerInParent="true"
-            android:text="Geo Lost &amp; Geo Found"
+            android:text="Geo Lost - Geo Found"
             android:textSize="20sp"
             android:textStyle="bold"
             android:textColor="#1A1A1A"
@@ -156,8 +156,9 @@
 
             <TextView
                 android:id="@+id/lostCount"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
+                android:layout_width="match_parent"
+                android:layout_height="36dp"
+                android:gravity="bottom|center_horizontal"
                 android:text="0"
                 android:textSize="26sp"
                 android:textStyle="bold"
@@ -187,8 +188,9 @@
 
             <TextView
                 android:id="@+id/foundCount"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
+                android:layout_width="match_parent"
+                android:layout_height="36dp"
+                android:gravity="bottom|center_horizontal"
                 android:text="0"
                 android:textSize="26sp"
                 android:textStyle="bold"
@@ -218,16 +220,17 @@
 
             <TextView
                 android:id="@+id/latestDate"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
+                android:layout_width="match_parent"
+                android:layout_height="36dp"
+                android:gravity="bottom|center_horizontal"
                 android:text="—"
                 android:textSize="16sp"
                 android:textStyle="bold"
                 android:textColor="#333333"
-                android:gravity="center" />
+                android:singleLine="true" />
 
             <TextView
-                android:layout_width="wrap_content"
+                android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:text="Latest"
                 android:textSize="13sp"

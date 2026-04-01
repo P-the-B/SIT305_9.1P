@@ -19,6 +19,7 @@ import com.example.lostfound.model.LostItem;
 import com.example.lostfound.util.TimeUtils;
 
 import java.util.List;
+import java.util.Locale;
 
 // Binds LostItem data to each RecyclerView row
 public class ItemAdapter extends RecyclerView.Adapter<ItemAdapter.ViewHolder> {
@@ -26,9 +27,20 @@ public class ItemAdapter extends RecyclerView.Adapter<ItemAdapter.ViewHolder> {
     private final List<LostItem> list;
     private final Context        context;
 
+    // User location — set by ItemListActivity when available
+    private double userLat = 0;
+    private double userLng = 0;
+
     public ItemAdapter(List<LostItem> list, Context context) {
         this.list    = list;
         this.context = context;
+    }
+
+    /** Called by ItemListActivity once a location fix is available */
+    public void updateUserLocation(double lat, double lng) {
+        this.userLat = lat;
+        this.userLng = lng;
+        notifyDataSetChanged();
     }
 
     @NonNull
@@ -56,6 +68,19 @@ public class ItemAdapter extends RecyclerView.Adapter<ItemAdapter.ViewHolder> {
         holder.txtType.setText(type);
         holder.txtLocation.setText(location);
         holder.txtTime.setText(TimeUtils.getTimeAgo(timestamp));
+
+        // Distance — shown only when we have a user location and the item has coordinates
+        if ((userLat != 0 || userLng != 0)
+                && (item.getLatitude() != 0 || item.getLongitude() != 0)) {
+            double km = haversineKm(userLat, userLng, item.getLatitude(), item.getLongitude());
+            String distLabel = km < 1.0
+                    ? String.format(Locale.getDefault(), "%dm", Math.round(km * 1000))
+                    : String.format(Locale.getDefault(), "%.1fkm", km);
+            holder.txtDistance.setText(distLabel);
+            holder.txtDistance.setVisibility(android.view.View.VISIBLE);
+        } else {
+            holder.txtDistance.setVisibility(android.view.View.GONE);
+        }
 
         // Red badge for Lost, green for Found
         holder.txtType.setBackgroundColor(
@@ -96,7 +121,7 @@ public class ItemAdapter extends RecyclerView.Adapter<ItemAdapter.ViewHolder> {
 
     static class ViewHolder extends RecyclerView.ViewHolder {
         ImageView imgThumb;
-        TextView  txtTitle, txtType, txtLocation, txtTime;
+        TextView  txtTitle, txtType, txtLocation, txtTime, txtDistance;
 
         ViewHolder(@NonNull View itemView) {
             super(itemView);
@@ -105,10 +130,22 @@ public class ItemAdapter extends RecyclerView.Adapter<ItemAdapter.ViewHolder> {
             txtType     = itemView.findViewById(R.id.txtType);
             txtLocation = itemView.findViewById(R.id.txtLocation);
             txtTime     = itemView.findViewById(R.id.txtTime);
+            txtDistance = itemView.findViewById(R.id.txtDistance);
         }
     }
 
     private String safe(String value, String fallback) {
         return (value == null || value.isEmpty()) ? fallback : value;
+    }
+
+    /** Haversine formula — distance in km between two lat/lng points */
+    private double haversineKm(double lat1, double lng1, double lat2, double lng2) {
+        final double R = 6371.0;
+        double dLat = Math.toRadians(lat2 - lat1);
+        double dLng = Math.toRadians(lng2 - lng1);
+        double a = Math.sin(dLat / 2) * Math.sin(dLat / 2)
+                + Math.cos(Math.toRadians(lat1)) * Math.cos(Math.toRadians(lat2))
+                * Math.sin(dLng / 2) * Math.sin(dLng / 2);
+        return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
     }
 }

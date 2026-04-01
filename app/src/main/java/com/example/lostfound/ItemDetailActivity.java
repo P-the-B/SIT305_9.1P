@@ -124,9 +124,14 @@ public class ItemDetailActivity extends AppCompatActivity implements OnMapReadyC
                 ? Color.parseColor("#E53935")
                 : Color.parseColor("#43A047"));
 
-        // Show Get Directions only for Found items that have coordinates
-        if (!isLost && latitude != 0 && longitude != 0) {
-            btnDirections.setVisibility(View.VISIBLE);
+        // Directions button — always visible.
+        // Greyed out only when both lat/lng are zero AND location text is empty (no address at all).
+        boolean hasCoords   = latitude != 0 || longitude != 0;
+        boolean hasLocation = !location.isEmpty();
+        btnDirections.setVisibility(View.VISIBLE);
+        if (!hasCoords && !hasLocation) {
+            btnDirections.setAlpha(0.4f);
+            btnDirections.setEnabled(false);
         }
 
         // Hide map card if no coordinates saved for this item
@@ -187,25 +192,32 @@ public class ItemDetailActivity extends AppCompatActivity implements OnMapReadyC
         btnBack.setOnClickListener(v -> finish());
         btnRemove.setOnClickListener(v -> showDeleteConfirmation());
 
-        // Opens Google Maps (or any installed nav app) in navigation mode
-        // from user's current location to the item's coordinates
+        // Directions button — uses exact coords when available, falls back to location text search
         btnDirections.setOnClickListener(v -> {
-            Uri gmmUri = Uri.parse(
-                    "google.navigation:q=" + latitude + "," + longitude + "&mode=d"
-            );
-            Intent mapIntent = new Intent(Intent.ACTION_VIEW, gmmUri);
-            mapIntent.setPackage("com.google.android.apps.maps");
-
-            // If Google Maps isn't installed, fall back to any navigation app
-            if (mapIntent.resolveActivity(getPackageManager()) != null) {
-                startActivity(mapIntent);
+            Intent mapIntent;
+            if (latitude != 0 || longitude != 0) {
+                // Precise coordinates — navigate directly
+                Uri gmmUri = Uri.parse(
+                        "google.navigation:q=" + latitude + "," + longitude + "&mode=d"
+                );
+                mapIntent = new Intent(Intent.ACTION_VIEW, gmmUri);
+                mapIntent.setPackage("com.google.android.apps.maps");
+                if (mapIntent.resolveActivity(getPackageManager()) == null) {
+                    // Fallback: geo URI for any map app
+                    Uri geoUri = Uri.parse("geo:" + latitude + "," + longitude
+                            + "?q=" + latitude + "," + longitude
+                            + "(" + Uri.encode(itemTitle) + ")");
+                    mapIntent = new Intent(Intent.ACTION_VIEW, geoUri);
+                }
             } else {
-                // Generic geo intent — works with any map app
-                Uri geoUri = Uri.parse("geo:" + latitude + "," + longitude
-                        + "?q=" + latitude + "," + longitude
-                        + "(" + Uri.encode(itemTitle) + ")");
-                startActivity(new Intent(Intent.ACTION_VIEW, geoUri));
+                // No coords — search by location text (suburb name etc.)
+                String query = itemTitle.isEmpty()
+                        ? safe(getIntent().getStringExtra(EXTRA_LOCATION))
+                        : itemTitle + " " + safe(getIntent().getStringExtra(EXTRA_LOCATION));
+                Uri searchUri = Uri.parse("geo:0,0?q=" + Uri.encode(query));
+                mapIntent = new Intent(Intent.ACTION_VIEW, searchUri);
             }
+            startActivity(mapIntent);
         });
     }
 

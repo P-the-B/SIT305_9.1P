@@ -27,7 +27,11 @@ import androidx.core.app.ActivityCompat;
 
 import com.example.lostfound.database.DBHelper;
 import com.google.android.gms.location.FusedLocationProviderClient;
+import com.google.android.gms.location.LocationCallback;
+import com.google.android.gms.location.LocationRequest;
+import com.google.android.gms.location.LocationResult;
 import com.google.android.gms.location.LocationServices;
+import com.google.android.gms.location.Priority;
 import com.google.android.libraries.places.api.Places;
 import com.google.android.libraries.places.api.model.Place;
 import com.google.android.libraries.places.widget.Autocomplete;
@@ -190,16 +194,19 @@ public class AddItemActivity extends AppCompatActivity {
 
     private void showDatePicker() {
         Calendar cal = Calendar.getInstance();
-        new DatePickerDialog(this,
+        DatePickerDialog dialog = new DatePickerDialog(this,
                 (view, year, month, day) -> {
                     etDate.setText(String.format(Locale.getDefault(),
                             "%02d/%02d/%04d", day, month + 1, year));
-                    tilDate.setErrorEnabled(false); // collapse error space on valid selection
+                    tilDate.setErrorEnabled(false);
                 },
                 cal.get(Calendar.YEAR),
                 cal.get(Calendar.MONTH),
                 cal.get(Calendar.DAY_OF_MONTH)
-        ).show();
+        );
+        // Block future dates — user cannot select a date after today
+        dialog.getDatePicker().setMaxDate(System.currentTimeMillis());
+        dialog.show();
     }
 
     // ─── PLACES AUTOCOMPLETE ───────────────────────────────────────────────────
@@ -239,9 +246,32 @@ public class AddItemActivity extends AppCompatActivity {
             if (location != null) {
                 applyLocation(location.getLatitude(), location.getLongitude());
             } else {
-                Toast.makeText(this,
-                        "Couldn't get location — try moving outside or using autocomplete",
-                        Toast.LENGTH_SHORT).show();
+                // No cached fix — request a fresh one-shot update
+                if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION)
+                        == PackageManager.PERMISSION_GRANTED) {
+                    LocationRequest req = new LocationRequest.Builder(
+                            Priority.PRIORITY_HIGH_ACCURACY, 1000)
+                            .setMaxUpdates(1)
+                            .build();
+                    fusedClient.requestLocationUpdates(req, new LocationCallback() {
+                        @Override
+                        public void onLocationResult(@NonNull LocationResult result) {
+                            fusedClient.removeLocationUpdates(this);
+                            if (!result.getLocations().isEmpty()) {
+                                android.location.Location loc = result.getLocations().get(0);
+                                applyLocation(loc.getLatitude(), loc.getLongitude());
+                            } else {
+                                Toast.makeText(AddItemActivity.this,
+                                        "Couldn't get location — try moving outside or using autocomplete",
+                                        Toast.LENGTH_SHORT).show();
+                            }
+                        }
+                    }, getMainLooper());
+                } else {
+                    Toast.makeText(this,
+                            "Couldn't get location — try moving outside or using autocomplete",
+                            Toast.LENGTH_SHORT).show();
+                }
             }
         });
     }

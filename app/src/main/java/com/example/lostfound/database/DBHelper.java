@@ -156,15 +156,24 @@ public class DBHelper extends SQLiteOpenHelper {
         return count;
     }
 
-    /** Most recent date string, or null if table is empty */
-    public String getLatestDate() {
+    /**
+     * Timestamp (ISO-8601) of the most recently posted item, or null if table is empty.
+     * Use TimeUtils.getTimeAgo() to display as "X mins ago" etc.
+     * NOTE: this is when the advert was *uploaded*, not the user-entered date of the event.
+     */
+    public String getLatestTimestamp() {
         Cursor c = getReadableDatabase().rawQuery(
-                "SELECT " + COL_DATE + " FROM " + TABLE
+                "SELECT " + COL_TIMESTAMP + " FROM " + TABLE
                         + " ORDER BY " + COL_ID + " DESC LIMIT 1", null);
-        String date = null;
-        if (c.moveToFirst()) date = c.getString(0);
+        String ts = null;
+        if (c.moveToFirst()) ts = c.getString(0);
         c.close();
-        return date;
+        return ts;
+    }
+
+    /** Public distance helper — lets UI layers calculate km without duplicating Haversine */
+    public double getDistanceKm(double lat1, double lng1, double lat2, double lng2) {
+        return haversineKm(lat1, lng1, lat2, lng2);
     }
 
     // ─── DELETE ────────────────────────────────────────────────────────────────

@@ -175,7 +175,7 @@
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="4dp"
-                    android:max="49"
+                    android:max="499"
                     android:progress="9"
                     android:progressTint="#1A73E8"
                     android:thumbTint="#1A73E8" />
