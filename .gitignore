@@ -1,0 +1,28 @@
+# Built artifacts
+*.iml
+/build
+/app/build
+/captures
+
+# Gradle cache and wrapper internals
+.gradle/
+/gradle/wrapper/gradle-wrapper.jar
+
+# Local machine config — never commit this
+local.properties
+# Secrets (DO NOT COMMIT)
+secrets.properties
+
+# macOS
+.DS_Store
+
+# Native build artifacts
+.externalNativeBuild/
+.cxx/
+
+# Android Studio / IntelliJ project files
+.idea/
+!.idea/vcs.xml
+
+*.keystore
+*.jks
